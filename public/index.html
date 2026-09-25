@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Le Registre Frugal — Carnet de Visites</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root { --bg: #0f141c; --card: #171f2c; --border: #263345; --text: #e2e8f0; --dim: #94a3b8; --accent: #38bdf8; --green: #34d399; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 2rem 1rem; max-width: 960px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; }
+    h1 { font-size: 1.4rem; font-weight: 600; display: flex; align-items: center; gap: .5rem; }
+    .domain-sel { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: .4rem .8rem; border-radius: 6px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .kpi { background: var(--card); border: 1px solid var(--border); padding: 1.2rem; border-radius: 8px; }
+    .kpi-title { font-size: .8rem; color: var(--dim); text-transform: uppercase; margin-bottom: .5rem; }
+    .kpi-val { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; }
+    .panel h2 { font-size: 1rem; margin-bottom: 1rem; color: var(--text); }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: .6rem 0; border-bottom: 1px solid #1e293b; font-size: .9rem; }
+    .row:last-child { border-bottom: none; }
+    .bar { background: rgba(56, 189, 248, 0.15); height: 100%; border-radius: 4px; padding: 2px 6px; }
+    .snippet { background: #080c11; padding: 1rem; border-radius: 6px; font-family: monospace; font-size: .8rem; color: var(--green); word-break: break-all; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📖 Le Registre Frugal</h1>
+    <input id="domainInput" class="domain-sel" value="default" placeholder="Domaine..." onchange="loadStats()">
+  </header>
+  <div class="grid">
+    <div class="kpi"><div class="kpi-title">Passants Uniques (Aujourd'hui)</div><div id="uVis" class="kpi-val" data-testid="visitors-unique">0</div></div>
+    <div class="kpi"><div class="kpi-title">Vitrines Consultées</div><div id="totViews" class="kpi-val" data-testid="pageviews">0</div></div>
+    <div class="kpi"><div class="kpi-title">Vitrines Actives</div><div id="actPages" class="kpi-val" data-testid="active-pages">0</div></div>
+    <div class="kpi"><div class="kpi-title">Sources Connues</div><div id="srcCount" class="kpi-val" data-testid="sources-count">0</div></div>
+  </div>
+  <div class="two-col">
+    <div class="panel">
+      <h2>🏆 Top Vitrines (Pages)</h2>
+      <div id="pagesList"><div class="row"><span>Aucune visite</span><span>0</span></div></div>
+    </div>
+    <div class="panel">
+      <h2>🧭 Provenance des Passants (Sources)</h2>
+      <div id="sourcesList"><div class="row"><span>Aucune source</span><span>0</span></div></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>📋 Bribe de code à coller sur vos pages</h2>
+    <div class="snippet">&lt;script defer data-domain="<span id="snipDom">default</span>" src="http://127.0.0.1:8092/tracker.js"&gt;&lt;/script&gt;</div>
+  </div>
+  <script>
+    async function loadStats() {
+      const d = document.getElementById('domainInput').value || 'default';
+      document.getElementById('snipDom').innerText = d;
+      try {
+        const res = await fetch(`/api/stats?domain=${encodeURIComponent(d)}`);
+        const data = await res.json();
+        document.getElementById('uVis').innerText = data.unique_visitors || 0;
+        document.getElementById('totViews').innerText = data.total_pageviews || 0;
+        document.getElementById('actPages').innerText = (data.top_pages || []).length;
+        document.getElementById('srcCount').innerText = (data.top_sources || []).length;
+        
+        const pList = document.getElementById('pagesList');
+        pList.innerHTML = (data.top_pages || []).length ? data.top_pages.map(p =>
+          `<div class="row"><span class="bar">${p.path}</span><strong>${p.views}</strong></div>`).join('') : '<div class="row"><span>Aucune visite</span><span>0</span></div>';
+          
+        const sList = document.getElementById('sourcesList');
+        sList.innerHTML = (data.top_sources || []).length ? data.top_sources.map(s =>
+          `<div class="row"><span class="bar">${s.source}</span><strong>${s.views}</strong></div>`).join('') : '<div class="row"><span>Aucune source</span><span>0</span></div>';
+      } catch(e) {}
+    }
+    loadStats(); setInterval(loadStats, 5000);
+  </script>
+</body>
+</html>
